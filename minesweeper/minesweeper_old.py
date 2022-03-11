@@ -1,0 +1,328 @@
+import random
+from re import split
+from os import system
+
+from termcolor import colored
+
+# --------- Utilities -----------------------------------------------------------------------------
+
+
+def vycisti_term():
+    system("cls||clear")
+    
+
+# Vytlačí ľubovoľné množstvo stringov s odsadením na ľavej strane.
+def padded_print(*strings, sep="\n    ", end='\n'):
+    print("    ", end='')
+    print(*strings, sep = sep, end = end)
+    
+    
+# Zistí, či sú dané indexy v rámci zadaného dvojrozmerného poľa.
+def v_ramci_pola(i, j, pole):
+    return (0 <= i < len(pole)) and (0 <= j < len(pole[0]))    
+    
+    
+# Vráti nové dvojrozmerné pole s požadovanou veľkosťou a prvkami.
+# prvok je funkcia, ktorá na základe riadku a stĺpca vracia určitú hodnotu.
+def nova_matica(riadky, stlpce, prvok):
+    return tuple(tuple(prvok(i, j) for j in range(stlpce)) for i in range(riadky))
+
+
+# Vráti nové dvojrozmerné pole s nahradeným prvkom.    
+def nahrad_prvok(riadok, stlpec, novy_prvok, pole):
+    return nova_matica(len(pole),
+                       len(pole[0]),
+                       lambda i, j: novy_prvok if (i, j) == (riadok, stlpec) else pole[i][j])
+    
+
+# --------- Logika hry ----------------------------------------------------------------------------
+    
+    
+# Vráti náhodne vygenerované 2-rozmerné pole s pozíciami mín
+# a očíslovanýmí bunkami podľa susedných mín.
+# Parametre: požadovaný počet riadkov, stĺpcov, mín, seed náhodných čísiel.
+
+def nove_minove_pole(riadky, stlpce, pocet_min, seed=None):
+    # Funkcie pracujúce s náhodnými hodnotami nemôžeme považovať za úplne 'čisté',
+    # pridanie parametru seed, ktorý ovplyvní náhodné hodnoty, aby boli podľa potreby vždy rovnaké,
+    # je dobrou strednou cestou medzi zachovaním pointy hry, a držaním sa funkcionálnej paradigmy.
+    
+    random.seed(seed)
+        
+    vsetky_pozicie = tuple((i, j) for i in range(riadky) for j in range(stlpce))
+    pozicie_min = nahodne_pozicie_min(tuple(), vsetky_pozicie, pocet_min)
+
+    # Vytvoríme 2-rozmerné pole s hviezdičkami pre míny.
+    minove_pole = nova_matica(riadky, stlpce, lambda i, j: '*' if (i, j) in pozicie_min else ' ')
+    
+    # Vrátime finálne 2-rozmerné pole, s hviezdičkami na pozíciach mín,
+    # ' ' na pozíciach bez susedných mín, a číslom vyjadrujúcim počet susedných mín na zvyšných pozíciach.
+    
+    return nova_matica(riadky, stlpce, lambda i, j: pocet_susednych_min(i, j, minove_pole))
+    
+    
+# Z dvojprvkových tuples reprezentujúcich pozície v 2D poli
+# náhodne vyberie požadovaný počet pozícii pre míny a vráti ich.
+
+def nahodne_pozicie_min(vybrane_pozicie, volne_pozicie, zvysne_miny):
+    if zvysne_miny == 0:
+        return vybrane_pozicie
+    
+    nova_nahodna_pozicia = random.choice(volne_pozicie)
+    nove_vybrane_pozicie = (*vybrane_pozicie, nova_nahodna_pozicia)
+    zostavajuce_pozicie = tuple(filter(lambda x: x != nova_nahodna_pozicia, volne_pozicie))
+                        # Dá sa nahradiť tuple(i for i in volne_pozicie if i != nova_nahodna_pozicia).
+    return nahodne_pozicie_min(nove_vybrane_pozicie, zostavajuce_pozicie, zvysne_miny - 1)
+
+
+# Zistí počet mín okolo bunky.
+# Parametre: riadok a stĺpec, na ktorom sa bunka nachádza,
+# mínové pole, v ktorom chceme susedné míny hladať.
+
+def pocet_susednych_min(riadok, stlpec, minove_pole):
+    # Ak je bunka mína, susedné míny nemusíme hladať.        
+    if minove_pole[riadok][stlpec] == '*':
+        return '*'
+    
+    susedia = ziskaj_susedov(riadok, stlpec, minove_pole)    
+    pocet_min = sum(i == '*' for i in susedia)
+    # Ak je počet susedných mín 0, vrátime ' '.
+    return pocet_min or ' '
+
+
+# Vráti susedné prvky, alebo súradnice, ktoré sú v rámci poľa.
+# Parametre: riadok a stĺpec, okolo ktorého hľadáme,
+# pole, v ktorom hľadáme, suradnice = chceme súradnice namiesto prvkov.
+
+def ziskaj_susedov(riadok, stlpec, pole, suradnice=False):
+    return tuple((i, j) if suradnice else pole[i][j]
+                 for i in range(riadok - 1, riadok + 2)
+                 for j in range(stlpec - 1, stlpec + 2)
+                 if (i, j) != (riadok, stlpec)
+                 and v_ramci_pola(i, j, pole))
+    
+
+# Vráti nové viditeľné pole s požadovanou odokrytou / vlajkou označenou bunkou.
+# Parametre: riadok a stĺpec, ktorý chceme odokryť / označiť, vlajka (True / False),
+# mínové pole a viditeľné pole, ktorých sa zmena týka.
+
+def nove_viditelne_pole(riadok, stlpec, vlajka, minove_pole, viditelne_pole):
+    realny_prvok = minove_pole[riadok][stlpec]
+    viditelny_prvok = viditelne_pole[riadok][stlpec]
+    
+    if vlajka:
+        if viditelny_prvok in ('#', '⚑'):
+            # Ak na vybranej pozícii už je vlajka, dáme ju preč.
+            novy_prvok = '#' if viditelny_prvok == '⚑' else '⚑'
+            # Vrátime nové 2-rozmerné pole s vlajkou / odstránenou vlajkou na vybranej pozícii.
+            return nahrad_prvok(riadok, stlpec, novy_prvok, viditelne_pole)
+        # Ak sa pokúsime dať vlajku na už odokrytú pozíciu, nič sa nezmení (vráti sa originálne vid. pole).
+        else: return viditelne_pole
+        
+    # Ak je pozícia už odokrytá, a vyberieme číslo, ktoré sa rovná počtu vlajok na
+    # susedných pozíciach čísla, odokryjeme všetky skryté susedné prvky (akord), inak sa nič nezmení.
+    
+    if realny_prvok == viditelny_prvok:
+        pocet_sus_vlajok = sum(i == '⚑' for i in ziskaj_susedov(riadok, stlpec, viditelne_pole))
+        if isinstance(realny_prvok, int) and realny_prvok == pocet_sus_vlajok:
+            suradnice_susedov = ziskaj_susedov(riadok, stlpec, viditelne_pole, suradnice=True)
+            skryti_susedia = tuple((i, j) for i, j in suradnice_susedov if viditelne_pole[i][j] == '#')
+            return odokry_pozicie(skryti_susedia, minove_pole, viditelne_pole)   
+        else: return viditelne_pole            
+    
+    # Ak je odokrytá bunka prázdna, zavoláme rekurzívnu funkciu,
+    # ktorá odokryje všetky susedné bunky.
+        
+    if realny_prvok == ' ':
+        nove_viditelne = nahrad_prvok(riadok, stlpec, realny_prvok, viditelne_pole)
+        suradnice_susedov = ziskaj_susedov(riadok, stlpec, viditelne_pole, suradnice=True)
+        skryti_susedia = tuple((i, j) for i, j in suradnice_susedov if viditelne_pole[i][j] == '#')
+        return odokry_pozicie(skryti_susedia, minove_pole, nove_viditelne)
+    
+    # Vrátime nové viditeľne pole s odokrytou bunkou.
+    return nahrad_prvok(riadok, stlpec, realny_prvok, viditelne_pole)
+    
+
+# Vráti nové viditelné pole, kde sú rekurzívne odokryté všetky požadované pozície.
+def odokry_pozicie(pozicie, minove_pole, viditelne_pole):
+    if not pozicie:
+        return viditelne_pole
+    
+    # Odokryjeme jednu pozíciu zo zoznamu pozícii.
+    nove_viditelne = nove_viditelne_pole(*pozicie[0], False, minove_pole, viditelne_pole)
+    return odokry_pozicie(pozicie[1:], minove_pole, nove_viditelne)
+
+
+# Skontroluje, či nebola odokrytá mína (prehra).
+def skontroluj_prehru(viditelne_pole):
+    return any(prvok == '*' for riadok in viditelne_pole for prvok in riadok)
+
+
+# Skontroluje, či sú odokryté všetky bunky okrem mín (výhra).
+def skontroluj_vyhru(viditelne_pole, pocet_min):
+    pocet_skrytych = sum(prvok in ('#', '⚑') for riadok in viditelne_pole for prvok in riadok)
+    return pocet_skrytych == pocet_min
+
+
+# --------- Vstup a výstup ------------------------------------------------------------------------
+
+
+# Zafarbí, naformátuje a vytlačí 2-rozmerné mínové pole do terminálu.
+def vytlac_pole(pole):
+    stlpce = len(pole[0])
+    
+    nadpis = f"\n    {colored('MINESWEEPER', 'cyan')}\n"
+    nazvy_stlpcov = f"      {''.join(f'{i + 1: <4}' for i in range(stlpce))}"
+    horna_hrana = f"    ╔{'═══╦' * (stlpce - 1)}═══╗"
+    dolna_hrana = f"    ╚{'═══╩' * (stlpce - 1)}═══╝"
+    medzi_riadky = f"\n    ╠{'═══╬' * (stlpce - 1)}═══╣\n"
+    
+    farby = {1: "cyan", 2: "green", 3: "red", 4: "yellow",
+            5: "blue", 6: "magenta", 7: "blue", 8: "magenta",
+            '#': None, ' ': None, '*': "white", '⚑': "white"}
+    
+    pozadia = {'*': "on_red", '⚑': "on_red"}
+    
+    # Prvok si pomocou knižnice termcolor zmeníme na špeciálny string,
+    # ktorý bude po vytlačení do terminálu zafarbený.
+    
+    def zafarbi_prvok(prvok):
+        return colored(prvok, farby.get(prvok), pozadia.get(prvok, None))
+    
+    # Riadky spojíme do stringu. # Zarovnané číslo riadku. # Všetky prvky spojíme s ' ║ ' a riadok ohraničíme s '║'
+    stred = medzi_riadky.join(f'{ix + 1: >3} ║ ' + ' ║ '.join(zafarbi_prvok(j) for j in i) + ' ║'
+                      for ix, i in enumerate(pole))
+    
+    # Vytlačíme finálne naformátované stringy.
+    print(nadpis, nazvy_stlpcov, horna_hrana, stred, dolna_hrana, sep='\n')
+    return None
+
+    
+# Získa, ošetrí a vráti súradnice zo vstupu.
+# Parametre: pole, v rámci ktorého by mal pohyb byť.
+
+def ziskaj_pohyb(pole):
+    vstup = input("\n    Zadajte stĺpec a riadok: ")
+    vlajka = '*' in vstup
+    
+    # Pri zadávaní súradníc ich môžeme oddeliť aj symbolmi . , + - * /,
+    # pre rýchlejšiu hru jednou rukou na numpade.
+    
+    suradnice = split("[\s\.\,\+\-/]", vstup.strip(" *"))
+    
+    if len(suradnice) != 2:
+        padded_print(colored("Chybný vstup. Nesprávny počet súradníc.",
+                             "white", "on_red"))
+        return ziskaj_pohyb(pole)
+    
+    stlpec, riadok = suradnice
+    
+    if not (riadok.isnumeric() and stlpec.isnumeric()):
+        padded_print(colored("Chybný vstup. Stĺpec a riadok musia byť čísla.",
+                             "white", "on_red"))
+        return ziskaj_pohyb(pole)
+
+    int_riadok, int_stlpec = int(riadok) - 1, int(stlpec) - 1
+        
+    if not v_ramci_pola(int_riadok, int_stlpec, pole):
+        padded_print(colored("Chybný vstup. Stĺpec, alebo riadok sú mimo mínového poľa.",
+                             "white", "on_red"))
+        return ziskaj_pohyb(pole)
+    
+    return int_riadok, int_stlpec, vlajka
+
+
+# Získa a ošetrí používateľom zadanú obtiažnosť.
+# Vráti počet riadkov, stĺpcov a mín podľa vybratej obtiažnosti.
+
+def ziskaj_obtiaznost():
+    vstup = input("\n    Vyberte si obtiažnosť: ").strip()
+    
+    if len(vstup) != 1 or not vstup.isnumeric() or not int(vstup) in (1, 2, 3):
+        padded_print(colored("Obtiažnosť musí byť číslo 1, 2, alebo 3.",
+                             "white", "on_red"))
+        return ziskaj_obtiaznost()
+    
+    obtiaznost = int(vstup) - 1
+    
+    riadky = (9, 16, 16)
+    stlpce = (9, 16, 30)
+    miny = (10, 40, 100)
+    
+    return riadky[obtiaznost], stlpce[obtiaznost], miny[obtiaznost]
+
+
+# Vypíše výsledok hry, a zistí či chce používateľ hrať znovu.
+def hrat_znovu(vyhral, minove_pole):
+    vycisti_term()
+    vytlac_pole(minove_pole)
+    
+    if vyhral: padded_print('', colored("Gratulujeme! Úspešne ste odokryli všetky polia.", "white", "on_green"))
+    else: padded_print('', colored("Ow :( Narazili ste na mínu.", "white", "on_red"))
+    
+    ano = colored("áno", "white", "on_green")
+    nie = colored("nie", "white", "on_red")
+    vstup = input(f"    Prajete si hrať znovu? ({ano} / {nie}): ")
+    return vstup.strip().lower() in ("áno", "ano", "a")
+
+
+# --------- Inicializácia a herná slučka ----------------------------------------------------------
+     
+        
+# Začiatok programu. Incializuje hru a spustí hernú slučku.
+def zacni_hru():
+    vycisti_term()
+    padded_print('', colored("MINESWEEPER\n", "cyan"),
+                 "Cieľ hry:      Odokryť všetky bunky, okrem tých, ktoré skrývajú míny.\n",
+                 "Pravidlá:      Číslo zobrazené v odokrytej bunke reprezentuje počet mín v ôsmich susedných bunkách.",
+                 "               Bunka, ktorá nemá susedné míny je prázdna a po jej odokrytí sa odokryjú aj všetky susedné bunky.",
+                 "               Ak si myslíme, že bunka skrýva mínu, môžeme ju označiť vlajkou.",
+                 "               Ak znovu odokryjeme už odokrytú bunku, ktorej číslo sa rovná počtu vlajok na susedných bunkách,",
+                 "               odokryjú sa všetky susedné bunky bez vlajok (tzv. 'akord', môžeme odokryť viac buniek naraz).\n",
+                 "Ovládanie:     Bunku na odokrytie zadáme v tvare 'stĺpec riadok' a potvrdíme enterom.",
+                 "               Stĺpec a riadok môžeme oddeliť medzerou, ale aj znakmi + - / , . podľa preferencie.",
+                 "               Ak chceme bunku označiť / odznačiť vlajkou, zadáme znak '*' za, alebo pred stĺpec a riadok.",
+                 "               Príklad platných vstupov: 3 4, *3 4, 3 4*, 3+4, 3*4*, *3/4, atď.\n",
+                 "Obtiažnosťi:   (1) 9x9 pole,   10 mín.",
+                 "               (2) 16x16 pole, 40 mín.",
+                 "               (3) 30x16 pole, 99 mín.")
+    
+    riadky, stlpce, pocet_min = ziskaj_obtiaznost()
+    minove_pole = nove_minove_pole(riadky, stlpce, pocet_min)
+    # V prvom viditeľnom poli bude všetko skryté.
+    viditelne_pole = nova_matica(riadky, stlpce, lambda i, j: '#')
+    
+    # Spusti hernú slučku.
+    # Ak vráti True, začni ďalšiu hru, inak ukonči program.
+
+    if herna_slucka(minove_pole, viditelne_pole, pocet_min):
+        return zacni_hru()
+    
+    return None
+    
+
+# Herná slučka, opakuje sa kým hráč neprehrá / nevyhrá.
+# Parametre: mínové pole a počet mín (nemení sa), viditeľné pole.
+
+def herna_slucka(minove_pole, viditelne_pole, pocet_min):
+        vycisti_term()
+        vytlac_pole(viditelne_pole)
+        
+        riadok, stlpec, vlajka = ziskaj_pohyb(viditelne_pole)
+        nove_viditelne = nove_viditelne_pole(riadok, stlpec, vlajka, minove_pole, viditelne_pole)
+        
+        if vlajka:
+            return herna_slucka(minove_pole, nove_viditelne, pocet_min)
+        
+        if skontroluj_prehru(nove_viditelne):
+            return hrat_znovu(False, minove_pole)
+        
+        if skontroluj_vyhru(nove_viditelne, pocet_min):
+            return hrat_znovu(True, minove_pole)
+        
+        return herna_slucka(minove_pole, nove_viditelne, pocet_min)
+
+
+# Ak modul priamo spúštame (neimportujeme), spustíme hru.
+if __name__ == "__main__":
+    zacni_hru()
