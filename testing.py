@@ -1,4 +1,9 @@
-from msvcrt import getch
+import curses
 
-while True:
-    print(getch())
+
+def main(stdscr):
+    pass
+
+
+if __name__ == "__main__":
+    curses.wrapper(main)
