@@ -24,7 +24,7 @@ def zobraz_kurzor():
 # Presunie kurzor na vrch terminálu
 # (vhodné na opakované vykreslovanie bez blikania).
 def vrch_terminalu():
-    print('\x1b[F' * 300)
+    print('\x1b[F' * 50)
 
 
 # Vytlačí ľubovoľné množstvo stringov s odsadením na ľavej strane.
@@ -65,17 +65,14 @@ def nove_minove_pole(riadky, stlpce, pocet_min, seed=None):
 
     random.seed(seed)
 
-    vsetky_pozicie = tuple((i, j) for i in range(riadky)
-                           for j in range(stlpce))
+    vsetky_pozicie = tuple((i, j) for i in range(riadky) for j in range(stlpce))
     pozicie_min = nahodne_pozicie_min(tuple(), vsetky_pozicie, pocet_min)
-
+    
     # Vytvoríme 2-rozmerné pole s hviezdičkami pre míny.
-    minove_pole = nova_matica(riadky, stlpce, lambda i,
-                              j: '*' if (i, j) in pozicie_min else ' ')
+    minove_pole = nova_matica(riadky, stlpce, lambda i, j: '*' if (i, j) in pozicie_min else ' ')
 
     # Vrátime finálne 2-rozmerné pole, s hviezdičkami na pozíciach mín,
     # ' ' na pozíciach bez susedných mín, a číslom vyjadrujúcim počet susedných mín na zvyšných pozíciach.
-
     return nova_matica(riadky, stlpce, lambda i, j: pocet_susednych_min(i, j, minove_pole))
 
 
@@ -89,8 +86,7 @@ def nahodne_pozicie_min(vybrane_pozicie, volne_pozicie, zvysne_miny):
 
     nova_nahodna_pozicia = random.choice(volne_pozicie)
     nove_vybrane_pozicie = (*vybrane_pozicie, nova_nahodna_pozicia)
-    zostavajuce_pozicie = tuple(
-        filter(lambda x: x != nova_nahodna_pozicia, volne_pozicie))
+    zostavajuce_pozicie = tuple(filter(lambda x: x != nova_nahodna_pozicia, volne_pozicie))
     # Dá sa nahradiť tuple(i for i in volne_pozicie if i != nova_nahodna_pozicia).
     return nahodne_pozicie_min.tail_call(nove_vybrane_pozicie, zostavajuce_pozicie, zvysne_miny - 1)
 
@@ -136,34 +132,26 @@ def nove_viditelne_pole(riadok, stlpec, vlajka, minove_pole, viditelne_pole):
             # Vrátime nové 2-rozmerné pole s vlajkou / odstránenou vlajkou na vybranej pozícii.
             return nahrad_prvok(riadok, stlpec, novy_prvok, viditelne_pole)
         # Ak sa pokúsime dať vlajku na už odokrytú pozíciu, nič sa nezmení (vráti sa originálne vid. pole).
-        else:
-            return viditelne_pole
+        else: return viditelne_pole
 
     # Ak je pozícia už odokrytá, a vyberieme číslo, ktoré sa rovná počtu vlajok na
     # susedných pozíciach čísla, odokryjeme všetky skryté susedné prvky (akord), inak sa nič nezmení.
 
     if realny_prvok == viditelny_prvok:
-        pocet_sus_vlajok = sum(i == '⚑' for i in ziskaj_susedov(
-            riadok, stlpec, viditelne_pole))
+        pocet_sus_vlajok = ziskaj_susedov(riadok, stlpec, viditelne_pole).count('⚑')
         if isinstance(realny_prvok, int) and realny_prvok == pocet_sus_vlajok:
-            suradnice_susedov = ziskaj_susedov(
-                riadok, stlpec, viditelne_pole, suradnice=True)
-            skryti_susedia = tuple(
-                (i, j) for i, j in suradnice_susedov if viditelne_pole[i][j] == '#')
+            suradnice_susedov = ziskaj_susedov(riadok, stlpec, viditelne_pole, suradnice=True)
+            skryti_susedia = tuple((i, j) for i, j in suradnice_susedov if viditelne_pole[i][j] == '#')
             return odokry_pozicie(skryti_susedia, minove_pole, viditelne_pole)
-        else:
-            return viditelne_pole
+        else: return viditelne_pole
 
-        # Ak je odokrytá bunka prázdna, zavoláme rekurzívnu funkciu,
+    # Ak je odokrytá bunka prázdna, zavoláme rekurzívnu funkciu,
     # ktorá odokryje všetky susedné bunky.
 
     if realny_prvok == ' ':
-        nove_viditelne = nahrad_prvok(
-            riadok, stlpec, realny_prvok, viditelne_pole)
-        suradnice_susedov = ziskaj_susedov(
-            riadok, stlpec, viditelne_pole, suradnice=True)
-        skryti_susedia = tuple(
-            (i, j) for i, j in suradnice_susedov if viditelne_pole[i][j] == '#')
+        nove_viditelne = nahrad_prvok(riadok, stlpec, realny_prvok, viditelne_pole)
+        suradnice_susedov = ziskaj_susedov(riadok, stlpec, viditelne_pole, suradnice=True)
+        skryti_susedia = tuple((i, j) for i, j in suradnice_susedov if viditelne_pole[i][j] == '#')
         return odokry_pozicie(skryti_susedia, minove_pole, nove_viditelne)
 
     # Vrátime nové viditeľne pole s odokrytou bunkou.
@@ -177,20 +165,18 @@ def odokry_pozicie(pozicie, minove_pole, viditelne_pole):
         return viditelne_pole
 
     # Odokryjeme jednu pozíciu zo zoznamu pozícii.
-    nove_viditelne = nove_viditelne_pole(
-        *pozicie[0], False, minove_pole, viditelne_pole)
+    nove_viditelne = nove_viditelne_pole(*pozicie[0], False, minove_pole, viditelne_pole)
     return odokry_pozicie.tail_call(pozicie[1:], minove_pole, nove_viditelne)
 
 
 # Skontroluje, či nebola odokrytá mína (prehra).
 def skontroluj_prehru(viditelne_pole):
-    return any(prvok == '*' for riadok in viditelne_pole for prvok in riadok)
+    return any('*' in riadok for riadok in viditelne_pole)
 
 
 # Skontroluje, či sú odokryté všetky bunky okrem mín (výhra).
 def skontroluj_vyhru(viditelne_pole, pocet_min):
-    pocet_skrytych = sum(prvok in ('#', '⚑')
-                         for riadok in viditelne_pole for prvok in riadok)
+    pocet_skrytych = sum(prvok in ('#', '⚑') for riadok in viditelne_pole for prvok in riadok)
     return pocet_skrytych == pocet_min
 
 
@@ -260,10 +246,9 @@ def ziskaj_pohyb(aktualna_pozicia, pole):
 
     if vstup == '\\xe0' and (special := str(getch()).strip('b\'')) in "HPKM":
         smer = special.translate(str.maketrans("HPKM", "wsad"))
-    else:
-        smer = vstup
+    else: smer = vstup
 
-    if smer.lower() in ('w', 's', 'a', 'd'):
+    if smer.lower() in "wsad":
         smery = {'w': (riadok - 1, stlpec),
                  's': (riadok + 1, stlpec),
                  'a': (riadok, stlpec - 1),
@@ -302,11 +287,9 @@ def hrat_znovu(vyhral, minove_pole):
     vytlac_pole(minove_pole)
 
     if vyhral:
-        padded_print('', colored(
-            "Gratulujeme! Úspešne ste odokryli všetky polia.", "white", "on_green"))
+        padded_print('', colored("Gratulujeme! Úspešne ste odokryli všetky polia.", "white", "on_green"))
     else:
-        padded_print('', colored(
-            "Ow :( Narazili ste na mínu.", "white", "on_red"))
+        padded_print('', colored("Ow :( Narazili ste na mínu.", "white", "on_red"))
 
     zobraz_kurzor()
     ano = colored("áno", "white", "on_green")
@@ -347,7 +330,6 @@ def zacni_hru():
 
     # Spusti hernú slučku.
     # Ak vráti True, začni ďalšiu hru, inak ukonči program.
-
     if herna_slucka(pociatocna_pozicia, minove_pole, viditelne_pole, pocet_min):
         return zacni_hru.tail_call()
 
@@ -366,13 +348,11 @@ def herna_slucka(aktualna_pozicia, minove_pole, viditelne_pole, pocet_min):
         return herna_slucka.tail_call(nova_pozicia, minove_pole, viditelne_pole, pocet_min)
 
     if akcia == "vlajka":
-        nove_viditelne = nove_viditelne_pole(
-            *nova_pozicia, True, minove_pole, viditelne_pole)
+        nove_viditelne = nove_viditelne_pole(*nova_pozicia, True, minove_pole, viditelne_pole)
         return herna_slucka.tail_call(aktualna_pozicia, minove_pole, nove_viditelne, pocet_min)
 
     if akcia == "odokry":
-        nove_viditelne = nove_viditelne_pole(
-            *nova_pozicia, False, minove_pole, viditelne_pole)
+        nove_viditelne = nove_viditelne_pole(*nova_pozicia, False, minove_pole, viditelne_pole)
 
     if skontroluj_prehru(nove_viditelne):
         return hrat_znovu(False, minove_pole)

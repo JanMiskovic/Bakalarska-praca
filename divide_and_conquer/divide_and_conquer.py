@@ -1,3 +1,5 @@
+from random import randint
+
 # Všeobecná Divide-and-conquer funkcia
 
 # problem - Problém, ktorý chceme riešiť (vstupné dáta)
@@ -7,9 +9,9 @@
 # combine - Skombinujé vyriešené podproblémy
 
 def divide_and_conquer(problem, indiv, divide, solve, combine):
+    @tail_recursive
     def dc(prob):
-        if indiv(prob):
-            return solve(prob)
+        if indiv(prob): return solve(prob)
         return combine(prob, list(map(dc, divide(prob))))
 
     return dc(problem)
@@ -53,9 +55,7 @@ def quicksort(lst):
 
 # Test funkčnosti
 
-from random import randint
-
-random_lst = [randint(0, 100) for _ in range(1000)]
+random_lst = [randint(0, 100) for _ in range(100)]
 print('Pôvodný list', random_lst, '\n')
 print('Mergesort', mergesort(random_lst), '\n')
 print('Quicksort', quicksort(random_lst))
