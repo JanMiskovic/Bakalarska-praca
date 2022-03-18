@@ -51,22 +51,22 @@ def zafarbi_vstup(vstup, kod):
     spravne = tuple('S' if i == j else 'Z' for i, j in zip(vstup, kod))
     kod_bez_s = ''.join(' ' if i == j else j for i, j in zip(vstup, kod))
     # Označíme si čísla na ostatných pozíciach, ak sú v kóde.
-    zafarbeny = zafarbi_pozicie(vstup, kod_bez_s, spravne)
+    oznacene = oznac_pozicie(vstup, kod_bez_s, spravne)
 
     farby = {'Z': None, 'P': "on_yellow", 'S': "on_green"}
-    return ''.join(colored(i, "white", farby[j]) for i, j in zip(vstup, zafarbeny))
+    return ''.join(colored(i, "white", farby[j]) for i, j in zip(vstup, oznacene))
 
     
 @tail_recursive
-def zafarbi_pozicie(vstup, kod, vystup, ix=0):
+def oznac_pozicie(vstup, kod, vystup, ix=0):
     if ix == len(kod):
        return vystup
    
     elif vstup[ix] in kod and vystup[ix] != 'S':
         novy_vystup = tuple('P' if i == ix else vystup[i] for i in range(len(vstup)))
-        return zafarbi_pozicie.tail_call(vstup, kod.replace(vstup[ix], ' '), novy_vystup, ix + 1)
+        return oznac_pozicie.tail_call(vstup, kod.replace(vstup[ix], ' '), novy_vystup, ix + 1)
     else:
-        return zafarbi_pozicie.tail_call(vstup, kod, vystup, ix + 1)
+        return oznac_pozicie.tail_call(vstup, kod, vystup, ix + 1)
  
 
 @tail_recursive()
