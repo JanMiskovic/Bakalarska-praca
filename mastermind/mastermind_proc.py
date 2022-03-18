@@ -1,93 +1,115 @@
-# Mastermind (v procedurálnom štýle)
+# Mastermind (v procedurálnom štýle).
 
-# Jednoduchá hra bežiaca v termináli
-# Cieľom hry je uhádnuť náhodný 4-číselný kód
-# Na uhádnutie kódu má hráč 10 pokusov
-# Po každom pokuse získa informácie, ktoré mu pomôžu logicky prísť na správny kód
-
-# Ak sa číslica v kóde nenachádza, zmení sa na 'Z' ('Zle')
-# Ak sa číslica v kóde nachádza, no na inej pozícii, zmení sa na 'P' ('Pozícia')
-# Ak sa číslica v kóde nachádza, a je na správnej pozícii, zmení sa na 'S' ('Správne')
+# Jednoduchá hra bežiaca v termináli.
+# Cieľom hry je uhádnuť náhodný 4-číselný kód.
+# Na uhádnutie kódu má hráč 10 pokusov.
+# Po každom pokuse získa informácie, ktoré mu pomôžu logicky prísť na správny kód.
 
 import random
+from os import system
+from termcolor import colored
 
-pokus = 1
+pokus = 0
+kod = []
+hrat = True
+
+
+def vycisti_terminal():
+    system("cls||clear")
+
+
+# Vytlačí ľubovoľné množstvo stringov s odsadením na ľavej strane.
+def padded_print(*strings, sep="\n    ", end='\n'):
+    print("    ", end='')
+    print(*strings, sep=sep, end=end)
 
 
 def vygeneruj_kod():
+    global kod
     kod = []
     for i in range(4):
-        kod.append(random.randint(0, 9))
-    return kod
-
-
-def ziskaj_vstup():
-    print(f"Zadajte 4-číselný kód: (pokus {pokus})\n")
-    vstup = input()
-
-    while(len(vstup) != 4 or not vstup.isnumeric()):
-        print("Vstup musí byť 4-číselný kód, napr. 1234.\n")
-        print(f"Zadajte 4-číselný kód: (pokus {pokus})\n")
-        vstup = input()
-
-    # Vstup si zmeníme na pole čísel
-    int_vstup = []
-    for i in vstup:
-        int_vstup.append(int(i))
-
-    return int_vstup
+        kod.append(str(random.randint(0, 9)))
 
 
 def hrat_znovu():
-    print("Chcete hrať znovu? (áno / nie)")
-    return input().lower() in ('ano', 'áno', 'a')
+    global hrat
+    vstup = input("    Prajete si hrať znovu? ("
+               + f"{colored('áno', on_color='on_green')} / "
+               + f"{colored('nie', on_color='on_red')}): ")
+    hrat = vstup.lower() in ('ano', 'áno', 'a')
 
 
-def hraj():
-    dalsia_hra = True
+def ziskaj_vstup():
+    vstup = input("    ")
 
-    while(dalsia_hra):
-        print("\nMASTERMIND\n",
-              "Pravidlá hry:\n",
-              "Cieľom hry je uhádnuť náhodný 4-číselný kód.",
-              "Na uhádnutie kódu máte 10 pokusov.",
-              "Ak sa číslica v kóde nenachádza, zmení sa na 'Z' ('Zle').",
-              "Ak sa číslica v kóde nachádza, no na inej pozícii, zmení sa na 'P' ('Pozícia').",
-              "Ak sa číslica v kóde nachádza, a je na správnej pozícii, zmení sa na 'S' ('Správne').", sep='\n', end='\n\n')
+    while(len(vstup) != 4 or not vstup.isnumeric()):
+        # Ak je vstup nesprávny, vrátime sa na začiatok riadku,
+        # a vymažeme symboly po koniec riadku.
+        print('\x1b[F\x1b[K', end='')
+        vstup = input("    ")
+
+    return [i for i in vstup]
+
+
+def zafarbi_vstup(vstup):
+    zafarbeny = ['Z', 'Z', 'Z', 'Z']
+    t_kod = kod.copy()
+
+    # Označíme si čísla na správnych pozíciach.
+    for ix, (i, j) in enumerate(zip(vstup, t_kod)):
+        if i == j:
+            zafarbeny[ix] = 'S' # Správne
+            t_kod[ix] = ' '
+
+    # Označíme si čísla na ostatných pozíciach, ak sú v kóde.       
+    for ix, (i, j) in enumerate(zip(vstup, t_kod)):
+        if i in t_kod and zafarbeny[ix] == 'Z':
+            zafarbeny[ix] = 'P' # Pozícia
+            t_kod[t_kod.index(i)] = ' '
+
+    farby = {'Z': None, 'P': "on_yellow", 'S': "on_green"}
+    return ''.join(colored(i, "white", farby[j]) for i, j in zip(vstup, zafarbeny))
+
+
+def zacni_hru():
+    while(hrat):
+        vycisti_terminal()
+        padded_print('', colored("MASTERMIND\n", "green"),
+                     "Pravidlá hry:\n",
+                     "Cieľom hry je uhádnuť náhodný 4-číselný kód.",
+                     "Na uhádnutie kódu máte 10 pokusov.",
+                     "Ak sa číslica v kóde nenachádza, jej farba zostane nezmenená.",
+                     "Ak sa číslica v kóde nachádza, no na inej pozícii, zafarbí sa na žlto.",
+                     "Ak sa číslica v kóde nachádza, a je na správnej pozícii, zafarbí sa na zeleno.\n\n")
 
         global pokus
         pokus = 1
-        kod = vygeneruj_kod()
-
-        str_kod = ""
-        for i in kod:
-            str_kod += str(i)
+        vygeneruj_kod()
 
         while pokus <= 10:
-            vstup = ziskaj_vstup()
+            print('\x1b[F' * pokus # Vrátime sa o n riadkov hore a prepíšeme aktuálny počet pokusov.
+                + f"    Zadajte 4-číselný kód: (pokus {pokus})\n"
+                + '\x1b[B' * (pokus - 1)) # Vrátime sa dole.
 
+            vstup = ziskaj_vstup()
+            zafarbeny = zafarbi_vstup(vstup)
+            # Vrátime sa na začiatok riadku a prepíšeme používateľov vstup zafarbeným vstupom.
+            print(f"\x1b[F    {zafarbeny}", end='')
+
+            # Skontrolujeme výhru.
             if vstup == kod:
-                print(f"Uhádli ste! Tajný kód je {str_kod}.\n")
-                dalsia_hra = hrat_znovu()
+                padded_print('\n', colored("Uhádli ste!", "white", "on_green"),
+                             f"Tajný kód bol {colored(''.join(kod), 'white', 'on_green')}.", end='\n')
+                hrat_znovu()
                 break
 
-            vystup = ""
-            for i in range(len(vstup)):
-                if vstup[i] == kod[i]:
-                    vystup += "S" 
-                elif vstup[i] in kod:
-                    vystup += "P"
-                else:
-                    vystup += "Z"
-
-            print(vystup, "\n")
             pokus += 1
         else:
-            print("GAME OVER!\n\n",
-                  "Kód ste neuhádli po 10. pokuse.\n",
-                  f"Správny kód bol {str_kod}.\n")
-            dalsia_hra = hrat_znovu()
+            # Prehra po 10. pokuse.
+            padded_print('\n', colored("GAME OVER! Neuhádli ste po 10. pokuse.", "white", "on_red"),
+                         f"Tajný kód bol {colored(''.join(kod), 'white', 'on_green')}.", end='\n')
+            hrat_znovu()
 
 
 if __name__ == "__main__":
-    hraj()
+    zacni_hru()
