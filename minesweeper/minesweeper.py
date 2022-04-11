@@ -4,6 +4,7 @@ from msvcrt import getch
 
 from termcolor import colored
 from tail_recursive import tail_recursive
+from functools import partial
 
 
 # --------- Utilities -----------------------------------------------------------------------------
@@ -46,9 +47,10 @@ def nova_matica(riadky, stlpce, prvok):
 
 # Vráti nové dvojrozmerné pole s nahradeným prvkom.
 def nahrad_prvok(riadok, stlpec, novy_prvok, pole):
-    return nova_matica(len(pole),
-                       len(pole[0]),
-                       lambda i, j: novy_prvok if (i, j) == (riadok, stlpec) else pole[i][j])
+    def prvok(i, j, r=riadok, s=stlpec, np=novy_prvok, p=pole):
+        return np if (i, j) == (r, s) else pole[i][j]
+    
+    return nova_matica(len(pole),len(pole[0]), prvok)
 
 
 # --------- Logika hry ----------------------------------------------------------------------------
@@ -69,11 +71,11 @@ def nove_minove_pole(riadky, stlpce, pocet_min, seed=None):
     pozicie_min = nahodne_pozicie_min(tuple(), vsetky_pozicie, pocet_min)
     
     # Vytvoríme 2-rozmerné pole s hviezdičkami pre míny.
-    minove_pole = nova_matica(riadky, stlpce, lambda i, j: '*' if (i, j) in pozicie_min else ' ')
+    minove_pole = nova_matica(riadky, stlpce, lambda i, j, p=pozicie_min: '*' if (i, j) in p else ' ')
 
     # Vrátime finálne 2-rozmerné pole, s hviezdičkami na pozíciach mín,
     # ' ' na pozíciach bez susedných mín, a číslom vyjadrujúcim počet susedných mín na zvyšných pozíciach.
-    return nova_matica(riadky, stlpce, lambda i, j: pocet_susednych_min(i, j, minove_pole))
+    return nova_matica(riadky, stlpce, lambda i, j, m=minove_pole: pocet_susednych_min(i, j, m))
 
 
 # Z dvojprvkových tuples reprezentujúcich pozície v 2D poli
@@ -86,7 +88,7 @@ def nahodne_pozicie_min(vybrane_pozicie, volne_pozicie, zvysne_miny):
     else:
         nova_nahodna_pozicia = random.choice(volne_pozicie)
         nove_vybrane_pozicie = (*vybrane_pozicie, nova_nahodna_pozicia)
-        zostavajuce_pozicie = tuple(filter(lambda x: x != nova_nahodna_pozicia, volne_pozicie))
+        zostavajuce_pozicie = tuple(filter(lambda x, n=nova_nahodna_pozicia: x != n, volne_pozicie))
         # Dá sa nahradiť tuple(i for i in volne_pozicie if i != nova_nahodna_pozicia).
         return nahodne_pozicie_min.tail_call(nove_vybrane_pozicie, zostavajuce_pozicie, zvysne_miny - 1)
 
