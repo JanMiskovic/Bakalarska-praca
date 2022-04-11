@@ -208,13 +208,13 @@ def vytlac_pole(pole, aktualna_pozicia=None):
     # Prvok si pomocou knižnice termcolor zmeníme na špeciálny string,
     # ktorý bude po vytlačení do terminálu zafarbený.
 
-    def zafarbi_prvok(riadok, stlpec):
-        prvok = pole[riadok][stlpec]
-        # Kurzor
-        if aktualna_pozicia is not None and (riadok, stlpec) == aktualna_pozicia:
+    def zafarbi_prvok(i, j, ap=aktualna_pozicia, p=pole, f=farby, pz=pozadia):
+        prvok = p[i][j]
+        # Kurzor.
+        if ap is not None and (i, j) == ap:
             return colored(prvok, "white", "on_cyan")
         else:
-            return colored(prvok, farby.get(prvok), pozadia.get(prvok))
+            return colored(prvok, f.get(prvok), pz.get(prvok))
 
     # Riadky spojíme do stringu. # Zarovnané číslo riadku. # Všetky prvky spojíme ' ║ ' a riadok ohraničíme '║' z oboch strán
     stred = medzi_riadky.join(f'{i + 1: >3} ║ ' + ' ║ '.join(zafarbi_prvok(i, j) for j in range(stlpce)) + ' ║'
