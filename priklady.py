@@ -387,17 +387,18 @@ def umocnenie(n):
 from functools import cache
 
 @cache
-def faktorial(n, f=1):
-    if n == 1: return f
-    else: return faktorial(n-1, f*n)
+def fib(n):
+    if n == 0: return 0
+    elif n == 1: return 1
+    else: return fib(n-1) + fib(n-2)
 
 @casovac    
-def obal_faktorial(n):
-    faktorial(n)
+def obal_fib(n):
+    fib(n)
     
-# obal_faktorial(300) # 0.0008303 sekúnd
-# obal_faktorial(250) # 0.0003383 sekúnd
-# obal_faktorial(350) # 0.0006119 sekúnd
+obal_fib(20) # Bez cache - 0.02s; Cache - 0.000058s  
+obal_fib(30) # Bez cache - 2.62s; Cache - 0.000027s 
+obal_fib(35) # Bez cache - 29.1s; Cache - 0.000010s
 
 
 # Generátorová notácia - Porovnanie s for cyklom
