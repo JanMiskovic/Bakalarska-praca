@@ -9,7 +9,6 @@ from random import randint
 # combine - Skombinujé vyriešené podproblémy
 
 def divide_and_conquer(problem, indiv, divide, solve, combine):
-    @tail_recursive
     def dc(prob):
         if indiv(prob): return solve(prob)
         return combine(prob, list(map(dc, divide(prob))))

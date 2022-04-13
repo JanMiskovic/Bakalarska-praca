@@ -88,8 +88,9 @@ def nahodne_pozicie_min(vybrane_pozicie, volne_pozicie, zvysne_miny):
     else:
         nova_nahodna_pozicia = random.choice(volne_pozicie)
         nove_vybrane_pozicie = (*vybrane_pozicie, nova_nahodna_pozicia)
-        zostavajuce_pozicie = tuple(filter(lambda x, n=nova_nahodna_pozicia: x != n, volne_pozicie))
-        # Dá sa nahradiť tuple(i for i in volne_pozicie if i != nova_nahodna_pozicia).
+        zostavajuce_pozicie = tuple(i for i in volne_pozicie if i != nova_nahodna_pozicia)
+        # Ekvivalent tuple(filter(lambda x, n=nova_nahodna_pozicia: x != n, volne_pozicie)).
+        
         return nahodne_pozicie_min.tail_call(nove_vybrane_pozicie, zostavajuce_pozicie, zvysne_miny - 1)
 
 
