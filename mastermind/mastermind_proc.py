@@ -27,15 +27,15 @@ def padded_print(*strings, sep="\n    ", end='\n'):
 def vygeneruj_kod():
     global kod
     kod = []
-    for i in range(4):
+    for _ in range(4):
         kod.append(str(random.randint(0, 9)))
 
 
 def hrat_znovu():
     global hrat
     vstup = input("    Prajete si hrať znovu? ("
-               + f"{colored('áno', on_color='on_green')} / "
-               + f"{colored('nie', on_color='on_red')}): ")
+               + f"{colored('áno', 'white', 'on_green')} / "
+               + f"{colored('nie', 'white', 'on_red')}): ")
     hrat = vstup.lower() in ('ano', 'áno', 'a')
 
 
@@ -67,8 +67,9 @@ def zafarbi_vstup(vstup):
             zafarbeny[ix] = 'P' # Pozícia
             t_kod[t_kod.index(i)] = ' '
 
-    farby = {'Z': None, 'P': "on_yellow", 'S': "on_green"}
-    return ''.join(colored(i, "white", farby[j]) for i, j in zip(vstup, zafarbeny))
+    pozadia = {'Z': None, 'P': "on_yellow", 'S': "on_green"}
+    farby = {'Z': None, 'P': "white", 'S': "white"}
+    return ''.join(colored(i, farby[j], pozadia[j]) for i, j in zip(vstup, zafarbeny))
 
 
 def zacni_hru():
@@ -77,7 +78,7 @@ def zacni_hru():
         padded_print('', colored("MASTERMIND\n", "green"),
                      "Pravidlá hry:\n",
                      "Cieľom hry je uhádnuť náhodný 4-číselný kód.",
-                     "Na uhádnutie kódu máte 10 pokusov.",
+                     "Na uhádnutie kódu máte 10 pokusov.\n",
                      "Ak sa číslica v kóde nenachádza, jej farba zostane nezmenená.",
                      "Ak sa číslica v kóde nachádza, no na inej pozícii, zafarbí sa na žlto.",
                      "Ak sa číslica v kóde nachádza, a je na správnej pozícii, zafarbí sa na zeleno.\n\n")

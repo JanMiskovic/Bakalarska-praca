@@ -21,14 +21,15 @@ def padded_print(*strings, sep="\n    ", end='\n'):
     print(*strings, sep=sep, end=end)
 
 
-def vygeneruj_kod():
+def vygeneruj_kod(seed=None):
+    random.seed(seed)
     return ''.join(str(random.randint(0, 9)) for _ in range(4))
 
 
 def hrat_znovu():
     vstup = input("    Prajete si hrať znovu? ("
-               + f"{colored('áno', on_color='on_green')} / "
-               + f"{colored('nie', on_color='on_red')}): ")
+               + f"{colored('áno', 'white', 'on_green')} / "
+               + f"{colored('nie', 'white', 'on_red')}): ")
     return vstup.lower() in ('ano', 'áno', 'a')
 
 
@@ -36,7 +37,6 @@ def hrat_znovu():
 def ziskaj_vstup():
     vstup = input("    ")
 
-    # Ak vstup nie je v správnom formáte, zavoláme funkciu znovu.
     if len(vstup) != 4 or not vstup.isnumeric():
         # Ak je vstup nesprávny, vrátime sa na začiatok riadku,
         # a vymažeme symboly po koniec riadku.
@@ -48,25 +48,26 @@ def ziskaj_vstup():
 
 def zafarbi_vstup(vstup, kod):
     # Označíme si čísla na správnych pozíciach.
-    spravne = tuple('S' if i == j else 'Z' for i, j in zip(vstup, kod))
-    kod_bez_s = ''.join(' ' if i == j else j for i, j in zip(vstup, kod))
+    zelene = tuple('S' if i == j else 'Z' for i, j in zip(vstup, kod))
+    kod_bez_zelenych = ''.join(' ' if i == j else j for i, j in zip(vstup, kod))
     # Označíme si čísla na ostatných pozíciach, ak sú v kóde.
-    oznacene = oznac_pozicie(vstup, kod_bez_s, spravne)
+    vsetky = oznac_zlte(vstup, kod_bez_zelenych, zelene)
 
-    farby = {'Z': None, 'P': "on_yellow", 'S': "on_green"}
-    return ''.join(colored(i, "white", farby[j]) for i, j in zip(vstup, oznacene))
+    pozadia = {'Z': None, 'P': "on_yellow", 'S': "on_green"}
+    farby = {'Z': None, 'P': "white", 'S': "white"}
+    return ''.join(colored(i, farby[j], pozadia[j]) for i, j in zip(vstup, vsetky))
 
     
 @tail_recursive
-def oznac_pozicie(vstup, kod, vystup, ix=0):
+def oznac_zlte(vstup, kod, vystup, ix=0):
     if ix == len(kod):
        return vystup
    
-    elif vstup[ix] in kod and vystup[ix] != 'S':
+    elif vstup[ix] in kod and vystup[ix] == 'Z':
         novy_vystup = tuple('P' if i == ix else vystup[i] for i in range(len(vstup)))
-        return oznac_pozicie.tail_call(vstup, kod.replace(vstup[ix], ' '), novy_vystup, ix + 1)
+        return oznac_zlte.tail_call(vstup, kod.replace(vstup[ix], ' '), novy_vystup, ix + 1)
     else:
-        return oznac_pozicie.tail_call(vstup, kod, vystup, ix + 1)
+        return oznac_zlte.tail_call(vstup, kod, vystup, ix + 1)
  
 
 @tail_recursive()
@@ -75,7 +76,7 @@ def zacni_hru():
     padded_print('', colored("MASTERMIND\n", "green"),
                     "Pravidlá hry:\n",
                     "Cieľom hry je uhádnuť náhodný 4-číselný kód.",
-                    "Na uhádnutie kódu máte 10 pokusov.",
+                    "Na uhádnutie kódu máte 10 pokusov.\n",
                     "Ak sa číslica v kóde nenachádza, jej farba zostane nezmenená.",
                     "Ak sa číslica v kóde nachádza, no na inej pozícii, zafarbí sa na žlto.",
                     "Ak sa číslica v kóde nachádza, a je na správnej pozícii, zafarbí sa na zeleno.\n\n")

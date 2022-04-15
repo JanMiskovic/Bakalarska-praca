@@ -4,7 +4,6 @@ from msvcrt import getch
 
 from termcolor import colored
 from tail_recursive import tail_recursive
-from functools import partial
 
 
 # --------- Utilities -----------------------------------------------------------------------------
@@ -47,10 +46,20 @@ def nova_matica(riadky, stlpce, prvok):
 
 # Vráti nové dvojrozmerné pole s nahradeným prvkom.
 def nahrad_prvok(riadok, stlpec, novy_prvok, pole):
-    def prvok(i, j, r=riadok, s=stlpec, np=novy_prvok, p=pole):
+    def prvok(i, j, r=riadok, s=stlpec, np=novy_prvok):
         return np if (i, j) == (r, s) else pole[i][j]
     
     return nova_matica(len(pole),len(pole[0]), prvok)
+
+
+# Vráti susedné prvky, alebo súradnice, ktoré sú v medziach poľa.
+# Parametre: riadok a stĺpec, okolo ktorého hľadáme,
+# pole, v ktorom hľadáme, suradnice = chceme súradnice namiesto prvkov.
+def ziskaj_susedov(riadok, stlpec, pole, suradnice=False):
+    return tuple((i, j) if suradnice else pole[i][j]
+                 for i in range(riadok - 1, riadok + 2)
+                 for j in range(stlpec - 1, stlpec + 2)
+                 if (i, j) != (riadok, stlpec) and v_ramci_pola(i, j, pole))
 
 
 # --------- Logika hry ----------------------------------------------------------------------------
@@ -109,17 +118,6 @@ def pocet_susednych_min(riadok, stlpec, minove_pole):
         return pocet_min or ' '
 
 
-# Vráti susedné prvky, alebo súradnice, ktoré sú v rámci poľa.
-# Parametre: riadok a stĺpec, okolo ktorého hľadáme,
-# pole, v ktorom hľadáme, suradnice = chceme súradnice namiesto prvkov.
-
-def ziskaj_susedov(riadok, stlpec, pole, suradnice=False):
-    return tuple((i, j) if suradnice else pole[i][j]
-                 for i in range(riadok - 1, riadok + 2)
-                 for j in range(stlpec - 1, stlpec + 2)
-                 if (i, j) != (riadok, stlpec) and v_ramci_pola(i, j, pole))
-
-
 # Vráti nové viditeľné pole s požadovanou odokrytou / vlajkou označenou bunkou.
 # Parametre: riadok a stĺpec, ktorý chceme odokryť / označiť, vlajka (True / False),
 # mínové pole a viditeľné pole, ktorých sa zmena týka.
@@ -168,7 +166,7 @@ def odokry_pozicie(pozicie, minove_pole, viditelne_pole):
     if not pozicie:
         return viditelne_pole
     else:
-        # Odokryjeme jednu pozíciu zo zoznamu pozícii.
+        # Odokryjeme jednu pozíciu zo zoznamu pozícii na odokrytie.
         nove_viditelne = nove_viditelne_pole(*pozicie[0], False, minove_pole, viditelne_pole)
         return odokry_pozicie.tail_call(pozicie[1:], minove_pole, nove_viditelne)
 
@@ -266,27 +264,29 @@ def ziskaj_pohyb(aktualna_pozicia, pole):
         return ziskaj_pohyb.tail_call(aktualna_pozicia, pole)
 
 
-# Získa a ošetrí používateľom zadanú obtiažnosť.
-# Vráti počet riadkov, stĺpcov a mín podľa vybratej obtiažnosti.
+# Získa a ošetrí používateľom zadanú obťažnosť.
+# Vráti počet riadkov, stĺpcov a mín podľa vybratej obťažnosti.
 
-def ziskaj_obtiaznost():
+@tail_recursive
+def ziskaj_obtaznost():
     zobraz_kurzor()
-    vstup = input("\n    Vyberte si obtiažnosť: ").strip()
+    vstup = input("\n    Vyberte si obťažnosť: ").strip()
     skry_kurzor()
 
     if len(vstup) != 1 or not vstup.isnumeric() or not int(vstup) in (1, 2, 3):
-        padded_print(colored("Obtiažnosť musí byť číslo 1, 2, alebo 3.",
+        padded_print(colored("Obťažnosť musí byť číslo 1, 2, alebo 3.",
                              "white", "on_red"))
-        return ziskaj_obtiaznost()
+        return ziskaj_obtaznost.tail_call()
     else:
-        obtiaznost = int(vstup) - 1
+        obtaznost = int(vstup) - 1
         riadky = (9, 16, 16)
         stlpce = (9, 16, 30)
         miny = (10, 40, 100)
-        return riadky[obtiaznost], stlpce[obtiaznost], miny[obtiaznost]
+        return riadky[obtaznost], stlpce[obtaznost], miny[obtaznost]
 
 
 # Vypíše výsledok hry, a zistí či chce používateľ hrať znovu.
+
 def hrat_znovu(vyhral, minove_pole):
     vytlac_pole(minove_pole)
     padded_print('', (colored("Gratulujeme! Úspešne ste odokryli všetky polia.", "white", "on_green"))
@@ -317,11 +317,11 @@ def zacni_hru():
                  "Ovládanie:     WASD a šípky - pohyb v bludisku.",
                  "               F a V - položenie / odstránenie vlajky.",
                  "               Medzerník a Enter - odokrytie bunky.\n",
-                 "Obtiažnosťi:   (1) 9x9 pole,   10 mín.",
+                 "Obťažnosťi:    (1) 9x9 pole,   10 mín.",
                  "               (2) 16x16 pole, 40 mín.",
                  "               (3) 30x16 pole, 99 mín.")
 
-    riadky, stlpce, pocet_min = ziskaj_obtiaznost()
+    riadky, stlpce, pocet_min = ziskaj_obtaznost()
     vycisti_terminal()
 
     minove_pole = nove_minove_pole(riadky, stlpce, pocet_min)
@@ -338,7 +338,7 @@ def zacni_hru():
 
 
 # Herná slučka, opakuje sa kým hráč neprehrá / nevyhrá.
-# Parametre: mínové pole a počet mín (nemení sa), viditeľné pole.
+# Parametre: aktuálna pozícia v poli, mínové pole, aktuálne viditeľné pole, počet mín.
 
 @tail_recursive
 def herna_slucka(aktualna_pozicia, minove_pole, viditelne_pole, pocet_min):
